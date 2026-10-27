@@ -255,7 +255,7 @@ def run(args):
         result=collect_pages(item,filter_name,output/'raw',get_page,args.max_pages,args.delay,online=not args.from_raw)
         atomic_json(output/'reviews.json',result)
         from export_workbook import export_workbook
-        receipt=export_workbook(output/'reviews.json',output/(args.filename or ('淘宝_'+item['id']+'_评价.xlsx')),Path(args.template) if args.template else None)
+        receipt=export_workbook(output/'reviews.json',output/(args.filename or ('淘宝_'+item['id']+'_评价.xlsx')),Path(args.template) if args.template else None,exclude_videos=getattr(args,'exclude_videos',False))
         receipt.update({'coverage':result['coverage'],'rawDirectory':str(output/'raw'),'normalizedData':str(output/'reviews.json')});atomic_json(output/'receipt.json',receipt)
         print(json.dumps(receipt,ensure_ascii=False),flush=True)
         if not result['coverage']['complete']:fail('PARTIAL','已达到本地页数预算，结果已导出但未宣称采完')
@@ -270,7 +270,7 @@ def run(args):
                 except Exception:pass # Unknown lease cleanup is retained in session.json, never close unrelated tabs.
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--url');p.add_argument('--output-dir',required=True);p.add_argument('--filter',choices=['image','all','video','append']);p.add_argument('--session');p.add_argument('--product-tab');p.add_argument('--rate-tab');p.add_argument('--webcli-entry');p.add_argument('--template');p.add_argument('--filename');p.add_argument('--max-pages',type=int,default=500);p.add_argument('--delay',type=float,default=1.5);p.add_argument('--from-raw',action='store_true');p.add_argument('--keep-tabs',action='store_true');a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--url');p.add_argument('--output-dir',required=True);p.add_argument('--filter',choices=['image','all','video','append']);p.add_argument('--session');p.add_argument('--product-tab');p.add_argument('--rate-tab');p.add_argument('--webcli-entry');p.add_argument('--template');p.add_argument('--filename');p.add_argument('--exclude-videos',action='store_true',help='不导出视频链接，保留评论和原始证据');p.add_argument('--max-pages',type=int,default=500);p.add_argument('--delay',type=float,default=1.5);p.add_argument('--from-raw',action='store_true');p.add_argument('--keep-tabs',action='store_true');a=p.parse_args()
     if not 1<=a.max_pages<=500 or not 0<=a.delay<=60:p.error('max-pages须1..500、delay须0..60')
     try:run(a)
     except CollectionError as e:print(json.dumps({'ok':False,'code':e.code,'message':str(e)},ensure_ascii=False),file=sys.stderr);sys.exit(2)

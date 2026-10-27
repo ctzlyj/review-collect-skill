@@ -135,12 +135,13 @@ def _excel_string(value: str | None, field: str) -> None:
                  or 0x10000 <= code <= 0x10FFFF, field, "XML 1.0 representable text")
 
 
-def _project_rows(data: NormalizedInput) -> list[tuple]:
+def _project_rows(data: NormalizedInput, *, exclude_videos: bool = False) -> list[tuple]:
     """Own workbook display rules without modifying normalized source facts."""
+    _require(type(exclude_videos) is bool, "exclude_videos", "explicit boolean")
     projected = []
     for i, row in enumerate(data["rows"]):
         values = (row["text"], ",".join(m["url"] for m in row["images"]),
-                  ",".join(m["url"] for m in row["videos"] if m["url"] is not None),
+                  "" if exclude_videos else ",".join(m["url"] for m in row["videos"] if m["url"] is not None),
                   MISSING_SKU_LABEL if row["sku"] in (None, "") else row["sku"], row["date"])
         for header, value in zip(HEADERS, values):
             _excel_string(value, f"rows[{i}].{header}")
@@ -249,12 +250,12 @@ def _verify_output(output_path: Path, values: list[tuple]) -> dict:
                 root=ET.fromstring(archive.read(name));_require(root.find(f'.//{{{XML_NS}}}f') is None,'output XML','no formula elements')
     return {'readback':True,'formula_free':True}
 
-def export_workbook(input_path,output_path,template_path=None) -> dict:
+def export_workbook(input_path,output_path,template_path=None, *, exclude_videos: bool = False) -> dict:
     input_path=Path(input_path).resolve();output_path=Path(output_path).resolve();template_path=Path(template_path or DEFAULT_TEMPLATE).resolve()
     sidecar_path=output_path.with_suffix('.coverage.json')
     _require(output_path.suffix.lower()=='.xlsx','output','.xlsx extension')
     _require(output_path not in {input_path,template_path} and sidecar_path not in {input_path,template_path},'output','not input or template')
-    data=parse_normalized_input(input_path);values=_project_rows(data);workbook,styles=_blank_from_reference(template_path)
+    data=parse_normalized_input(input_path);values=_project_rows(data,exclude_videos=exclude_videos);workbook,styles=_blank_from_reference(template_path)
     try:
         for index,row in enumerate(values,2):
             for col,value in enumerate(row,1):
@@ -263,12 +264,14 @@ def export_workbook(input_path,output_path,template_path=None) -> dict:
     finally:workbook.close()
     validation=_verify_output(output_path,values)
     summary={'item':data['item'],'coverage':data['coverage'],'row_count':len(values),'initial_count':sum(row['type']=='initial' for row in data['rows']),'append_count':sum(row['type']=='append' for row in data['rows']),'missing_video_url_count':sum(m['url'] is None for row in data['rows'] for m in row['videos'])}
+    video_policy={'video_policy':'excluded' if exclude_videos else 'included','excluded_video_url_count':sum(m['url'] is not None for row in data['rows'] for m in row['videos']) if exclude_videos else 0}
+    summary.update(video_policy)
     sidecar_path.write_text(json.dumps(summary,ensure_ascii=False,indent=2,allow_nan=False)+'\n',encoding='utf-8')
-    return {'output_path':str(output_path),'coverage_path':str(sidecar_path),'row_count':len(values),'sheet_name':SHEET_NAME,'columns':list(HEADERS),'validation':validation}
+    return {'output_path':str(output_path),'coverage_path':str(sidecar_path),'row_count':len(values),'sheet_name':SHEET_NAME,'columns':list(HEADERS),'validation':validation,**video_policy}
 
 def main(argv=None) -> int:
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--input',required=True,type=Path);parser.add_argument('--output',required=True,type=Path);templates=parser.add_mutually_exclusive_group();templates.add_argument('--template',type=Path);templates.add_argument('--reference-file',type=Path);args=parser.parse_args(argv)
-    try:result=export_workbook(args.input,args.output,args.reference_file or args.template)
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--input',required=True,type=Path);parser.add_argument('--output',required=True,type=Path);parser.add_argument('--exclude-videos',action='store_true',help='Leave video cells blank; preserve source rows and evidence');templates=parser.add_mutually_exclusive_group();templates.add_argument('--template',type=Path);templates.add_argument('--reference-file',type=Path);args=parser.parse_args(argv)
+    try:result=export_workbook(args.input,args.output,args.reference_file or args.template,exclude_videos=args.exclude_videos)
     except (ValueError,OSError,KeyError,BadZipFile,InvalidFileException,ET.ParseError) as error:
         print(f'export error: {error}',file=sys.stderr);return 1
     print(json.dumps(result,ensure_ascii=True));return 0

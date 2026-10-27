@@ -56,3 +56,38 @@ class RecoveryTests(unittest.TestCase):
    raw=Path(d)/'raw';raw.mkdir();item={'id':'1','sellerId':None};write_checkpoint(raw/'page-0001.json',item,1,'image','u','{"url":"https://login.taobao.com/"}');calls=[]
    with self.assertRaises(CollectionError):collect_pages(item,'image',raw,lambda u:calls.append(u),delay=0,online=False)
    self.assertEqual(calls,[])
+
+
+class NoVideoCliTests(unittest.TestCase):
+ def test_offline_dispatch_excludes_export_videos_without_browser_or_source_loss(self):
+  import subprocess
+  from openpyxl import load_workbook
+  from collect_reviews import rate_url
+  with tempfile.TemporaryDirectory() as folder:
+   out=Path(folder);item={'id':'123','sellerId':None,'url':'https://item.taobao.com/item.htm?id=123'}
+   (out/'session.json').write_text(json.dumps({'item':item,'filter':'image'}),encoding='utf-8')
+   raw=json.dumps({'comments':[{'rateId':1234567890123456789,'content':'Synthetic initial','auction':{'aucNumId':'123','sku':'Synthetic SKU'},'photos':[{'url':'https://example.invalid/picture.jpg'}],'video':{'cloudVideoUrl':'https://example.invalid/initial.mp4'},'append':{'appendId':9876543210987654321,'content':'Synthetic append','video':{'videoId':7}}}],'total':1})
+   checkpoint=out/'raw/page-0001.json';write_checkpoint(checkpoint,item,1,'image',rate_url(item,1,'image'),raw)
+   original=checkpoint.read_bytes()
+   script=Path(__file__).with_name('collect.py')
+   done=subprocess.run([sys.executable,'-X','utf8','-B',str(script),'--platform','taobao','--from-raw','--output-dir',str(out),'--exclude-videos','--filename','no-video.xlsx'],capture_output=True,text=True,encoding='utf-8')
+   self.assertEqual(done.returncode,0,done.stderr)
+   self.assertEqual(json.loads(done.stdout.splitlines()[-1])['video_policy'],'excluded')
+   result=json.loads((out/'reviews.json').read_text(encoding='utf-8'))
+   receipt=json.loads((out/'receipt.json').read_text(encoding='utf-8'))
+   self.assertEqual(checkpoint.read_bytes(),original)
+   self.assertEqual(len(result['rows']),2)
+   self.assertEqual(result['rows'][0]['id'],'123:1234567890123456789')
+   self.assertEqual(result['rows'][1]['parentId'],result['rows'][0]['id'])
+   self.assertEqual(len(result['rows'][0]['videos']),1)
+   self.assertIsNone(result['rows'][1]['videos'][0]['url'])
+   self.assertTrue(result['coverage']['complete'])
+   self.assertEqual(receipt['video_policy'],'excluded')
+   self.assertEqual(receipt['excluded_video_url_count'],1)
+   workbook=load_workbook(out/'no-video.xlsx')
+   try:
+    self.assertEqual(workbook.sheetnames,['全部'])
+    self.assertEqual(workbook.active.max_row,3)
+    self.assertEqual(workbook.active.max_column,5)
+    self.assertTrue(all(workbook.active.cell(row,3).value is None for row in (2,3)))
+   finally:workbook.close()

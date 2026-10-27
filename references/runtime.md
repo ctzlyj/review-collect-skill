@@ -23,3 +23,13 @@ Windows：Python 3.12、Node、WebCLI Browser Bridge在用户已有浏览器中�
 在线恢复会保留failed-attempts里的旧LOGIN/VERIFY/API响应，并在新一次请求同意下单次重取已明确拒绝的只读页；不会在同次调用自动反复认证重试。离线模式拒绝失败页，格式/identity/digest损坏不静默替换。
 
 表格写出优先本机捆绑artifact-tool（Python生成已验证五列模型，Node author）；openpyxl作来源/回读验证。没有捆绑引擎的独立环境可用openpyxl写出。实测artifact导出将字面CRLF正规化为LF，因此当原值带CR且须无损保留时采用格式专用string序列化写出；不偷偷修改客户文字。默认实际目标45行已经用artifact引擎回读和视觉校验，五列值/宽一致。
+
+## 不要视频：只改变导出投影
+
+触发：用户要求不要视频，但仍要评论、SKU、图片和初追评。旧入口会把源视频链接一起输出，需要手工再次导出；根因是导出投影没有显式媒体开关。
+
+现在在线采集可加 `--exclude-videos`；已有完整检查点可直接运行 `collect.py --platform taobao --from-raw --output-dir "已有结果目录" --exclude-videos`，不会为导出策略重新联网。独立导出器也接受同名选项。
+
+开关只让“视频”单元格留空，五列表头不变；不删除带视频的评论，也不修改 raw、reviews.json、sourceRows、原ID、未知值或初追评关联。receipt/coverage 记录 `video_policy` 与 `excluded_video_url_count`，complete/partial 仍由原采集范围决定，不因排除视频变成全部成功。
+
+人工回归覆盖显式布尔参数、CLI、离线完整流程、原始字节/来源事实保留与Excel回读。若源页损坏、身份不匹配或缺页，沿用原停止/partial策略；不要以清空视频掩盖采集失败。默认不传开关仍输出现有视频链接。

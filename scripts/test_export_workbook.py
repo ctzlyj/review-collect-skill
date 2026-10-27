@@ -64,6 +64,56 @@ class ExportWorkbookTests(unittest.TestCase):
         self.write_input()
         return self.api.export_workbook(self.input, self.output, template_path=template)
 
+    def test_exclude_videos_is_display_only_and_preserves_source_scope(self):
+        self.payload["sourceRows"] = copy.deepcopy(self.payload["rows"])
+        self.write_input()
+        original = self.input.read_bytes()
+        parsed = self.api.parse_normalized_input(self.input)
+        source_facts = copy.deepcopy(parsed)
+        projected = self.api._project_rows(parsed, exclude_videos=True)
+        self.assertEqual(parsed, source_facts)
+        self.assertEqual(len(projected), len(parsed["rows"]))
+        self.assertTrue(all(row[2] == "" for row in projected))
+        receipt = self.api.export_workbook(self.input, self.output, exclude_videos=True)
+        self.assertEqual(self.input.read_bytes(), original)
+        workbook = load_workbook(self.output)
+        self.addCleanup(workbook.close)
+        self.assertEqual(workbook.sheetnames, ["全部"])
+        self.assertEqual(workbook.active.max_column, 5)
+        self.assertEqual(list(workbook.active.values),
+                         [tuple(HEADERS), *[tuple(None if value == "" else value for value in row)
+                                           for row in projected]])
+        summary = json.loads(Path(receipt["coverage_path"]).read_text(encoding="utf-8"))
+        self.assertEqual(summary["coverage"], self.payload["coverage"])
+        self.assertEqual(summary["video_policy"], "excluded")
+        self.assertEqual(summary["excluded_video_url_count"], 1)
+        self.assertEqual(receipt["video_policy"], "excluded")
+        self.assertEqual(receipt["excluded_video_url_count"], 1)
+        self.assertEqual(summary["missing_video_url_count"], 2)
+        self.assertEqual(receipt["row_count"], len(self.payload["rows"]))
+
+    def test_exclude_videos_requires_explicit_boolean(self):
+        for value in ("false", None, 0, 1):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                self.api.export_workbook(self.input, self.output, exclude_videos=value)
+        self.assertFalse(self.output.exists())
+
+    def test_cli_exclude_videos_keeps_video_column_and_all_rows(self):
+        original = self.input.read_bytes()
+        done = subprocess.run([sys.executable, "-B", str(SCRIPT), "--input", str(self.input),
+                               "--output", str(self.output), "--exclude-videos"],
+                              capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        receipt = json.loads(done.stdout)
+        self.assertEqual(receipt["video_policy"], "excluded")
+        self.assertEqual(self.input.read_bytes(), original)
+        workbook = load_workbook(self.output)
+        self.addCleanup(workbook.close)
+        self.assertEqual(workbook.active.max_row, len(self.payload["rows"]) + 1)
+        self.assertEqual([cell.value for cell in workbook.active[1]], HEADERS)
+        self.assertTrue(all(workbook.active.cell(row, 3).value is None
+                            for row in range(2, workbook.active.max_row + 1)))
+
     def test_packaged_template_is_header_only_with_reference_style(self):
         with ZipFile(TEMPLATE) as z:
             self.assertFalse(any(n.startswith("xl/media/") or n == "xl/sharedStrings.xml" for n in z.namelist()))

@@ -15,7 +15,7 @@ description: 采集淘宝/天猫商品评价和拼多多商家后台评价，导
 
 `python -X utf8 scripts/collect.py --url "完整淘宝/天猫商品链接" --output-dir "仓库外的新目录"`
 
-默认带图；`--filter all|image|video|append` 可选。五列为 **内容、图片、视频、SKU、评论时间**，sheet“全部”。URL逗号连接、追评分行、缺日期留空、缺SKU在Excel显示“未显示sku”但源JSON保留未知。`--from-raw` 离线恢复需显式 `--platform taobao`；原 `scripts/collect_reviews.py` 接口保留。
+默认带图；`--filter all|image|video|append` 可选。用户说“不要视频”时加 `--exclude-videos`：视频列留空，不删带视频的评论，不改原始响应、来源ID或初追评关联。五列为 **内容、图片、视频、SKU、评论时间**，sheet“全部”。URL逗号连接、追评分行、缺日期留空、缺SKU在Excel显示“未显示sku”但源JSON保留未知。`--from-raw` 离线恢复需显式 `--platform taobao`；原 `scripts/collect_reviews.py` 接口保留。
 
 ### 拼多多商家后台
 
