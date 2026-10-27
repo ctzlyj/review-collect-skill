@@ -1,0 +1,24 @@
+# Local Python/build state
+__pycache__/
+*.py[cod]
+.venv/
+node_modules/
+
+# Local collection results and browser/session evidence
+outputs/
+results/
+evidence/
+raw/
+failed-attempts/
+*.xlsx
+!assets/workbook-template.xlsx
+*.zip
+*.coverage.json
+session.json
+browser-attempt.json
+progress.json
+reviews.json
+receipt.json
+error.json
+.env
+.env.*
