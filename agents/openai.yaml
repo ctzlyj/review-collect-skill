@@ -1,4 +1,4 @@
 interface:
-  display_name: "淘宝天猫评价采集"
-  short_description: "Collect Taobao reviews through a logged-in browser"
-  default_prompt: "Use $taobao-review-collect to collect the specified product reviews into the requested Excel format."
+  display_name: "评论采集"
+  short_description: "Collect marketplace reviews through authorized browser sessions"
+  default_prompt: "Use $review-collect to collect reviews from the specified supported platform and export the requested workbook."

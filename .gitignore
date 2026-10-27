@@ -22,3 +22,14 @@ receipt.json
 error.json
 .env
 .env.*
+
+# PDD task outputs/auth state
+.work/
+media/
+checkpoint.json
+pdd-session.json
+summary.json
+media-manifest.json
+partial-reviews.json
+cookies.json
+network.json

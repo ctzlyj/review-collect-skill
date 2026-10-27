@@ -277,6 +277,16 @@ class ExportWorkbookTests(unittest.TestCase):
             ("造数据😀\r\n尾行", "=image", "=video", "=sku", "=date")])
         self.assertTrue(all(c.data_type != "f" for row in w.active for c in row))
 
+    def test_iso_date_and_numeric_sku_remain_literal_strings(self):
+        self.payload['rows']=self.payload['rows'][:1]
+        self.payload['rows'][0]['date']='2026-10-01T00:00:00+08:00'
+        self.payload['rows'][0]['sku']='00123'
+        self.export()
+        w=load_workbook(self.output)
+        self.addCleanup(w.close)
+        self.assertEqual(w.active['E2'].value,'2026-10-01T00:00:00+08:00')
+        self.assertEqual(w.active['D2'].value,'00123')
+
     def test_cli_invalid_input_returns_error_without_traceback(self):
         self.input.write_text('{"rows":', encoding="utf-8")
         done = subprocess.run([sys.executable, "-B", str(SCRIPT), "--input", str(self.input),

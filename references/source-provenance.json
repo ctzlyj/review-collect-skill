@@ -1,0 +1,36 @@
+{
+  "source_repository": "ctzlyj/jd-jx-pictured-review",
+  "source_commit": "c7ca61f3ce97019a1b85ebc244a75840e6741095",
+  "scope": "PDD merchant read-only review collection; no JD generation/submission or authorization core",
+  "files": [
+    {
+      "path": "platforms/pinduoduo/collect_reviews.py",
+      "sha256": "2bc7007fcebc91d29d0536a6bb06fe3a05f57a436ebd614e6f517336b0a0290d"
+    },
+    {
+      "path": "platforms/pinduoduo/collect_reviews_bulk.py",
+      "sha256": "361b12366595280788a7a7044dd745a1cbb04c36e90fa909d3d9cfb0c28d1386"
+    },
+    {
+      "path": "platforms/pinduoduo/README.md",
+      "sha256": "403b09dc03a3f83f585167772229a09a864a700f95ffedfd927bbff6ed802129"
+    }
+  ],
+  "retained": [
+    "/saturn/reviews/list response fields",
+    "month windows and pagination",
+    "explicit goods selection",
+    "source specs and image/livePhoto/video parsing",
+    "review identity and media SHA provenance",
+    "download failure manifests"
+  ],
+  "changed": [
+    "normal logged-in browser; capture parameters only in page memory",
+    "no persisted cookies or anti-content",
+    "no stealth browser configuration or auth/verification retry",
+    "explicit mall selection; unknown observed mall remains unknown",
+    "no implicit five-star/negative/JD-forbidden selection",
+    "uniform five-column workbook with source facts retained separately",
+    "bounded optional media downloads; duplicate media does not drop review text"
+  ]
+}

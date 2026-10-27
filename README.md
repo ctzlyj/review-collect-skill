@@ -1,45 +1,29 @@
-# 淘宝 / 天猫评价采集 Skill
+# 评论采集
 
-私有维护仓库，技能调用名：`$taobao-review-collect`。独立实现，不依赖此前的自产 Chrome 采集插件，不是至尊宝官方产品。
+私有多平台评价采集 Skill，调用名 `$review-collect`。GitHub仓库：`ctzlyj/review-collect-skill`。
 
-## 内容
-
-- `SKILL.md`：技能入口与授权边界。
-- `scripts/collect_reviews.py`：复用正常已登录浏览器的 WebCLI 会话，读取评价分页，保留检查点。
-- `scripts/export_workbook.py`：生成参考格式 Excel 并回读验证。
-- `scripts/artifact_workbook.mjs`：有捆绑表格引擎时的 Node 写出入口。
-- `assets/workbook-template.xlsx`：只有表头的空白模板，无客户评价数据。
-- `scripts/test_*.py`：人工数据边界测试。
+| 平台 | 当前范围 |
+|---|---|
+| 淘宝/天猫 | 已实现商品评价/初追评、媒体URL、SKU与Excel |
+| PDD | 已迁入商家后台月窗/分页、商品与评分筛选、媒体URL及可选下载；当前未登录，真实店铺采集待验收 |
+| 京东/1688/抖音 | 后续扩展，尚未实现 |
 
 ## 使用
 
-把本仓库的技能文件放到个人技能目录下的 `taobao-review-collect` 文件夹，或在 Codex 中显式指定本仓库的 `SKILL.md`。
+把仓库根目录安装为个人技能 `review-collect`，入口 `SKILL.md`。依赖既有Node/WebCLI Browser Bridge、Python3.12/openpyxl；PDD图片下载额外用已安装Pillow。没有自动软件安装、授权写操作或商业平台提交。
 
-需要：Python 3.12、openpyxl（已验证版本 3.1.5）、Node，以及已连接且正常登录的 WebCLI Browser Bridge。本仓库不自动安装或升级这些软件，也不保存或复制登录凭据。
+淘宝：`python -X utf8 scripts/collect.py --url "商品链接" --output-dir "仓库外目录"`。
 
-```powershell
-python -X utf8 scripts/collect_reviews.py --url "https://item.taobao.com/item.htm?id=商品ID" --output-dir "D:/review-outputs/商品ID"
-```
+PDD：正常登录当前店铺评价页，`python -X utf8 scripts/collect.py --platform pdd --session SESSION --tab TARGET --prepare`，然后正常查询一次，再传 `--mall-id CURRENT_MALL --output-dir DIR --months 1 --limit 100` 采集。`--include-videos --download-media` 显式选用；具体边界见 [PDD运行说明](references/pdd.md)。
 
-默认采集带图评价；可按需求选择 `--filter all|image|video|append`。Excel 工作表为“全部”，列顺序为：**内容、图片、视频、SKU、评论时间**。图片/视频按 URL 导出，不在默认流程偷偷下载媒体文件。初评和追评分行，缺失日期保持空白。
+统一Excel：sheet“全部”，五列 **内容、图片、视频、SKU、评论时间**。图片/视频用URL逗号连接；源身份与范围保存JSON，不增加用户未要求列。
 
-离线重放已保留的完整检查点：
+## 管理与验证
 
-```powershell
-python -X utf8 scripts/collect_reviews.py --output-dir "D:/review-outputs/商品ID" --from-raw
-```
+`python -X utf8 -m unittest discover -s scripts -p "test_*.py" -v`；Skill frontmatter可用本机skill-creator quick_validate检验。
 
-## 验证
+来源PDD模块固定commit与adaptation记录见 [来源记录](references/source-provenance.json)。只迁入只读采集，不携带JD生成/评价提交/授权核心；不继承五星和正面文本隐性过滤、默认店铺ID或伪装/拒绝自动刷新逻辑。
 
-```powershell
-python -X utf8 -m unittest discover -s scripts -p "test_*.py" -v
-```
+所有输出在repo外；私密仓库只存技能源码/测试/空白模板。真实评论、媒体、请求响应、cookies/anti-content、会话与浏览器配置均不得提交。平台拒绝/限流/登录立即停，不绕过；已达到limit不等于全部范围完整。
 
-2026-10-27 已在指定淘宝商品上验证完整在线采集及独立离线重放。该记录不保证其他商品、未来接口版本或受限内容。具体行为和恢复条件见 `references/runtime.md`。
-
-## 数据与权限
-
-- 本仓库仅包含源码、测试、技能元信息和空白模板。
-- 原始评价、导出表格、浏览器会话、网络响应和凭据不上传；请把采集输出放到仓库外。
-- 登录、验证码、权限拒绝或限流时停止，不绕过限制，不复制 Cookie，不调用商业插件会员后端。
-- 统计与结束状态只针对实际访问的筛选分页，不宣称获取平台隐藏、删除或受限的全部评价。
+原淘宝采集脚本命令兼容保留。2026-10-27迁入测试/实时验证边界见PDD说明；之前目标商品验证不保证其他平台或未来接口。

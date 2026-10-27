@@ -1,4 +1,4 @@
-# 浏览器执行与恢复
+# 淘宝/天猫：浏览器执行与恢复
 
 ## 已验证环境
 Windows：Python 3.12、Node、WebCLI Browser Bridge在用户已有浏览器中。collect_reviews.py以Python subprocess argv直接调用WebCLI Node入口，**不经cmd拼JavaScript**，避免中文/箭头/URL & 被shell破坏。默认由PATH上的webcli shim目录解析 node_modules/@jd/webcli/dist/src/main.js；其他布局用--webcli-entry。必要时看已安装browser-task-router和o2官方说明，不卸载/重装Bridge，不修改全局包。
